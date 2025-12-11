@@ -47,5 +47,77 @@ class Controller:
         self._view.page.update()
 
     """Implementare la parte di ricerca del cammino minimo"""
+    def handle_cammino_minimo(self, e):
+        """
+        Callback per il bottone 'Cammino Minimo'.
+        - legge la soglia dalla view
+        - verifica che il grafo sia stato costruito
+        - chiama i due metodi del Model
+        - mostra i cammini minimi nella lista_visualizzazione
+        """
+        soglia_txt = self._view.txt_soglia.value
+        try:
+            soglia = float(soglia_txt)
+        except (TypeError, ValueError):
+            self._view.show_alert("Inserisci un numero valido nel campo soglia.")
+            return
+
+        # controlla che il grafo esista già
+        if self._model.G is None or self._model.G.number_of_nodes() == 0:
+            self._view.show_alert("Prima costruisci il grafo (bottone 'Calcola sentieri').")
+            return
+
+        #chiamo i metodi dal model
+        cammini_nx, peso_nx = self._model.ricerca_cammino_minimo_nx(soglia)
+        cammini_dfs, peso_dfs = self._model.ricerca_cammino_minimo_recursion(soglia)
+
+        # pulisco area risultati
+        self._view.lista_visualizzazione.controls.clear()
+
+        # nessun cammino trovato
+        if not cammini_dfs:
+            self._view.lista_visualizzazione.controls.append(
+                ft.Text("Nessun cammino valido trovato (peso > soglia e almeno 2 archi).")
+            )
+            self._view.page.update()
+            return
+
+        # opzionale: controllo che i due metodi diano lo stesso risultato
+        #if cammini_nx and abs(peso_nx - peso_dfs) > 1e-6:
+        if peso_nx != peso_dfs:
+            self._view.lista_visualizzazione.controls.append(
+                ft.Text(
+                    f"ATTENZIONE: i due algoritmi non coincidono "
+                    f"(NetworkX={peso_nx:.2f}, DFS={peso_dfs:.2f})"
+                    )
+                )
+
+        self._view.lista_visualizzazione.controls.append(
+            ft.Text("Cammino minimo:"))
+
+        for idx, path in enumerate(cammini_dfs, start=1):
+            if len(cammini_dfs) > 1:
+                self._view.lista_visualizzazione.controls.append(
+                    ft.Text(f"Cammino #{idx}:")
+                )
+            for i in range(len(path) - 1):
+                u = path[i]
+                v = path[i + 1]
+
+                # peso dell'arco nel grafo
+                peso_arco = self._model.G[u][v]["weight"]
+
+                # ADATTA QUI se i campi del rifugio hanno nomi diversi
+                testo_riga = (
+                        f"[{u.id_rifugio}] {u.nome} ({u.localita}) "
+                        f"--> "
+                        f"[{v.id_rifugio}] {v.nome} ({v.localita}) "
+                        f"[peso: {peso_arco:.1f}]"
+                    )
+
+                self._view.lista_visualizzazione.controls.append(
+                        ft.Text(testo_riga))
+
+        self._view.page.update()
     # TODO
 
